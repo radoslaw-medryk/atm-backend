@@ -1,6 +1,5 @@
 import Big from "big.js";
-import { AvailableMoney } from "../db/models/AvailableMoney";
-import { IdAndAmount } from "../db/models/IdAndAmount";
+import { CashEntry } from "./models/CashEntry";
 import { selectPayoutMoney } from "./selectPayoutMoney";
 
 type TestIdAndCount = [string, number];
@@ -116,12 +115,60 @@ describe("selectPayoutMoney", () => {
             ],
         })
     );
+
+    test(
+        `Handles not available cash entries in the beginning`,
+        testCase({
+            value: new Big(2000),
+            available: [
+                ["1000", 0],
+                ["500", 2],
+                ["200", 10],
+            ],
+            expected: [
+                ["500", 2],
+                ["200", 5],
+            ],
+        })
+    );
+
+    test(
+        `Handles not available cash entries in the middle`,
+        testCase({
+            value: new Big(2000),
+            available: [
+                ["1000", 1],
+                ["500", 0],
+                ["200", 10],
+            ],
+            expected: [
+                ["1000", 1],
+                ["200", 5],
+            ],
+        })
+    );
+
+    test(
+        `Handles not available cash entries in the end`,
+        testCase({
+            value: new Big(2000),
+            available: [
+                ["1000", 1],
+                ["500", 2],
+                ["200", 0],
+            ],
+            expected: [
+                ["1000", 1],
+                ["500", 2],
+            ],
+        })
+    );
 });
 
 function testCase(testCase: TestCase) {
     return () => {
-        const availableMoney = testCase.available.map(mapAvailableMoney);
-        const expected = testCase.expected && testCase.expected.map(mapIdAndCount);
+        const availableMoney = testCase.available.map(mapToCashEntry);
+        const expected = testCase.expected && testCase.expected.map(mapToCashEntry);
 
         const actual = selectPayoutMoney(testCase.value, availableMoney);
 
@@ -129,17 +176,10 @@ function testCase(testCase: TestCase) {
     };
 }
 
-function mapAvailableMoney(input: TestIdAndCount): AvailableMoney {
+function mapToCashEntry(input: TestIdAndCount): CashEntry {
     return {
         id: input[0],
-        value: new Big(input[0]),
-        amount: input[1],
-    };
-}
-
-function mapIdAndCount(input: TestIdAndCount): IdAndAmount {
-    return {
-        id: input[0],
-        amount: input[1],
+        singleUnitValue: new Big(input[0]),
+        count: input[1],
     };
 }

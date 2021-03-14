@@ -1,81 +1,108 @@
 import Big, { RoundingMode } from "big.js";
-import { AvailableMoney } from "../db/models/AvailableMoney";
-import { IdAndAmount } from "../db/models/IdAndAmount";
 import { last } from "../utils/last";
 import { by } from "../utils/sortBy";
-import { sure } from "../utils/sure";
+import { CashEntry } from "./models/CashEntry";
 
-type StepIndexAndAmount = {
+type IntermediateCashEntry = {
     index: number;
-    money: AvailableMoney;
+    id: string;
+    singleUnitValue: Big;
     count: number;
 };
 
-export function selectPayoutMoney(value: Big, availableMoney: AvailableMoney[]): IdAndAmount[] | undefined {
-    const sortedAvailableMoney = availableMoney.sort(by(q => q.value, "desc"));
+export function selectPayoutMoney(value: Big, availableCashEntries: CashEntry[]): CashEntry[] | undefined {
+    const sortedAvailableEntries = availableCashEntries.sort(by(q => q.singleUnitValue, "desc"));
 
-    const selectedMoney: StepIndexAndAmount[] = [];
+    const selectedEntries: IntermediateCashEntry[] = [];
 
     while (true) {
-        const valueSoFar = getTotalValue(selectedMoney);
+        const valueSoFar = getTotalValue(selectedEntries);
         const valueLeft = value.minus(valueSoFar);
 
         if (valueLeft.eq(0)) {
-            return mapResult(sortedAvailableMoney, selectedMoney);
+            return mapResult(selectedEntries);
         }
 
-        const lastSelected = last(selectedMoney);
-        const lastIndex = lastSelected ? lastSelected.index : -1;
-
-        const currIndex = lastIndex + 1;
-        const currMoney = sortedAvailableMoney[currIndex];
-
-        if (currMoney) {
-            const currCount = maxPossibleCount(valueLeft, currMoney);
-
-            selectedMoney.push({
-                index: currIndex,
-                money: currMoney,
-                count: currCount,
-            });
+        const nextSmallerEntry = findNextSmallerCashEntry(sortedAvailableEntries, selectedEntries, valueLeft);
+        if (nextSmallerEntry) {
+            selectedEntries.push(nextSmallerEntry);
             continue;
         }
 
-        while (true) {
-            const currentClimb = selectedMoney.pop();
-            if (!currentClimb) {
-                return undefined;
-            }
-
-            if (currentClimb.count > 0) {
-                selectedMoney.push({
-                    index: currentClimb.index,
-                    money: currentClimb.money,
-                    count: currentClimb.count - 1,
-                });
-                break;
-            }
+        const didBacktrackMofified = backtrackAndModifySelectedEntries(selectedEntries);
+        if (!didBacktrackMofified) {
+            return undefined;
         }
     }
 }
 
-function mapResult(sortedAvailableMoney: AvailableMoney[], selectedMoney: StepIndexAndAmount[]): IdAndAmount[] {
-    return selectedMoney
-        .map(q => ({
-            id: sure(sortedAvailableMoney[q.index]).id,
-            amount: q.count,
-        }))
-        .filter(q => q.amount > 0);
+function findNextSmallerCashEntry(
+    sortedAvailableEntries: CashEntry[],
+    selectedEntries: IntermediateCashEntry[],
+    valueLeft: Big
+): IntermediateCashEntry | undefined {
+    const lastSelectedEntry = last(selectedEntries);
+    const lastIndex = lastSelectedEntry ? lastSelectedEntry.index : -1;
+
+    const nextIndex = lastIndex + 1;
+    const nextAvailableEntry = sortedAvailableEntries[nextIndex];
+
+    if (nextAvailableEntry) {
+        const nextCount = maxPossibleCount(valueLeft, nextAvailableEntry);
+
+        return {
+            index: nextIndex,
+            id: nextAvailableEntry.id,
+            singleUnitValue: nextAvailableEntry.singleUnitValue,
+            count: nextCount,
+        };
+    }
+
+    return undefined;
 }
 
-function getTotalValue(selectedMoney: StepIndexAndAmount[]): Big {
-    return selectedMoney.reduce((sum, curr) => {
-        const value = curr.money.value.mul(curr.count);
+function backtrackAndModifySelectedEntries(selectedEntries: IntermediateCashEntry[]) {
+    while (true) {
+        const currentClimb = selectedEntries.pop();
+        if (!currentClimb) {
+            return false;
+        }
+
+        if (currentClimb.count > 0) {
+            selectedEntries.push({
+                index: currentClimb.index,
+                id: currentClimb.id,
+                singleUnitValue: currentClimb.singleUnitValue,
+                count: currentClimb.count - 1,
+            });
+
+            return true;
+        }
+    }
+}
+
+function mapResult(selectedEntries: IntermediateCashEntry[]): CashEntry[] {
+    return selectedEntries
+        .map(q => ({
+            id: q.id,
+            singleUnitValue: q.singleUnitValue,
+            count: q.count,
+        }))
+        .filter(q => q.count > 0);
+}
+
+function getTotalValue(entries: IntermediateCashEntry[]): Big {
+    return entries.reduce((sum, curr) => {
+        const value = curr.singleUnitValue.mul(curr.count);
         return sum.plus(value);
     }, new Big(0));
 }
 
-function maxPossibleCount(valueLeft: Big, currMoney: AvailableMoney): number {
-    const maxOptimisticCount = valueLeft.div(currMoney.value).round(0, RoundingMode.RoundDown).toNumber();
-    return Math.min(maxOptimisticCount, currMoney.amount);
+function maxPossibleCount(valueLeft: Big, nextAvailableEntry: CashEntry): number {
+    const maxOptimisticCount = valueLeft
+        .div(nextAvailableEntry.singleUnitValue)
+        .round(0, RoundingMode.RoundDown)
+        .toNumber();
+
+    return Math.min(maxOptimisticCount, nextAvailableEntry.count);
 }
