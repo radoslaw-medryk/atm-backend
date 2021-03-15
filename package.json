@@ -4,7 +4,7 @@
     "scripts": {
         "build": "rimraf dist && ttsc",
         "start": "nodemon",
-        "lint": "eslint ./src --ext .js,.jsx,.ts,.tsx && prettier -c *",
+        "lint": "eslint ./src --ext .js,.jsx,.ts,.tsx && prettier -c ./src/**/*",
         "db": "docker run --rm -it -p 127.0.0.1:5432:5432 $(docker build -q ./local_db)",
         "test": "jest"
     },

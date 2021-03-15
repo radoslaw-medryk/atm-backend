@@ -7,6 +7,4 @@ async function main() {
     startServer(config.server.port);
 }
 
-main()
-    .then(() => console.log("MAIN FINISHED EXECUTION"))
-    .catch(e => console.error("ERROR IN MAIN", e));
+main().catch(e => console.error("ERROR IN MAIN", e));

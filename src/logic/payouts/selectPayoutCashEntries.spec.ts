@@ -1,6 +1,6 @@
 import Big from "big.js";
 import { CashEntry } from "./models/CashEntry";
-import { selectPayoutMoney } from "./selectPayoutMoney";
+import { selectPayoutCashEntries } from "./selectPayoutCashEntries";
 
 type TestIdAndCount = [string, number];
 
@@ -10,7 +10,7 @@ type TestCase = {
     expected: TestIdAndCount[] | undefined;
 };
 
-describe("selectPayoutMoney", () => {
+describe("selectPayoutCashEntries", () => {
     test(
         `Returns undefined when nothing available`,
         testCase({
@@ -170,7 +170,7 @@ function testCase(testCase: TestCase) {
         const availableMoney = testCase.available.map(mapToCashEntry);
         const expected = testCase.expected && testCase.expected.map(mapToCashEntry);
 
-        const actual = selectPayoutMoney(testCase.value, availableMoney);
+        const actual = selectPayoutCashEntries(testCase.value, availableMoney);
 
         expect(actual).toEqual(expected);
     };

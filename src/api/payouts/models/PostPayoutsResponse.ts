@@ -1,5 +1,5 @@
-import { CashEntry } from "../../../logic/models/CashEntry";
+import { CashEntry } from "../../../logic/payouts/models/CashEntry";
 
 export type PostPayoutsResponse = {
-    entries: CashEntry[] | undefined;
+    selectedEntries: CashEntry[] | undefined;
 };

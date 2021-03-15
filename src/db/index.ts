@@ -1,6 +1,5 @@
 import { createPool } from "slonik";
 import { config } from "../config";
-import { initDb } from "./init";
 import { fromNumeric } from "./utils/fromNumeric";
 import { fromUtc } from "./utils/fromUtc";
 

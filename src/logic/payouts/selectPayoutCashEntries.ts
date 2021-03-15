@@ -1,6 +1,6 @@
 import Big, { RoundingMode } from "big.js";
-import { last } from "../utils/last";
-import { by } from "../utils/sortBy";
+import { last } from "../../utils/last";
+import { by } from "../../utils/sortBy";
 import { CashEntry } from "./models/CashEntry";
 
 type IntermediateCashEntry = {
@@ -10,7 +10,7 @@ type IntermediateCashEntry = {
     count: number;
 };
 
-export function selectPayoutMoney(value: Big, availableCashEntries: CashEntry[]): CashEntry[] | undefined {
+export function selectPayoutCashEntries(value: Big, availableCashEntries: CashEntry[]): CashEntry[] | undefined {
     const sortedAvailableEntries = availableCashEntries.sort(by(q => q.singleUnitValue, "desc"));
 
     const selectedEntries: IntermediateCashEntry[] = [];
