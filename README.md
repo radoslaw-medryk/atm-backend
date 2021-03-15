@@ -30,6 +30,15 @@ This project is a standalone REST API server built using Node + Typescript. It c
 - `big.js` - For hanling decimal precision numbers
 - a few more small library and helpers
 
+### Concurrency safety
+
+The project ensures concurrency safety (i.e. when multiple payout operations are performed concurrently and compete for the limited amount of bills/coins). The project ensures there are no unexpected results (e.g. negative amount of bills/coins left, etc.) by relying on PostgreSQL function's transactional nature.
+
+The payout operation consists of 3 steps:
+- get available coins/bills amounts from the DB;
+- in code, find the desired combination of coins&bills to withdraw;
+- transactionally substract the amounts from the DB. If concurrent operation modified them to the point where there is no enough coins/bills to satisfy the payout, transaction is reverted and exception raised.
+
 ### Tests, linting & prettier
 
 This project is set up with Unit Tests using `jest`, Linting with `eslint` and `prettier` for formatting the code.
@@ -66,3 +75,13 @@ POST localhost:5000/payouts
     ]
 }
 ```
+
+### Notes
+
+I have realised an edge case when the algorithm fails to select the optimal solution (the least number of banknotes/coins). I have expressed it as a Unit test that fails right now `Can give up on some big value bills to achieve overall optimaly low number of bills/coins`.
+
+I have found descriptions of this problem with more description and example algorithms, e.g. here:
+
+https://en.wikipedia.org/wiki/Change-making_problem
+
+Given limited time resources I didn't have a chance to make the fixes yet.

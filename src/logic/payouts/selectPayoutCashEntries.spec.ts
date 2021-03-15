@@ -163,6 +163,25 @@ describe("selectPayoutCashEntries", () => {
             ],
         })
     );
+
+    test(
+        `Can give up on some big value bills to achieve overall optimaly low number of bills/coins`,
+        testCase({
+            value: new Big(2100),
+            available: [
+                ["1000", 1],
+                ["500", 2],
+                ["200", 10],
+                ["100", 0],
+                ["1", 1000],
+            ],
+            expected: [
+                ["1000", 1],
+                ["500", 1],
+                ["200", 3],
+            ],
+        })
+    );
 });
 
 function testCase(testCase: TestCase) {
